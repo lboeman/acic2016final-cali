@@ -53,7 +53,7 @@ def main():
 		del df["yyyy-mm-dd"]
 		
 		# rename columns that we dont need to alter
-		df.rename(columns({CSV_HEADER_MAP['Precip(mm)']:'Precip(mm)'}))
+		df['Precip(mm)'] = df[CSV_HEADER_MAP['Precip(mm)']]
 		df = df[['Year','Month','Day','T_max','T_min','Precip(mm)','T_ave','Precip(cm)','rh_ave']]
 		print("writing to %s" % fn)
 		df.to_csv(data_dir+'/'+fn,index=False)
