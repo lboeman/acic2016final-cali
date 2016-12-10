@@ -1,5 +1,5 @@
 """
-Gathers maca data using openDap
+Downloads CSVs of the maca dataset and formats them for use with MOLS
 
 TODO: implement argparse rather than sys.argv for cli arguments
 """
@@ -25,7 +25,7 @@ from io import StringIO
 	7 = pr
 	8 = scenario (rcp45 or rcp 85)
 """
-URL = "http://climate-dev.nkn.uidaho.edu/Services/get-netcdf-data/?download-csv=True&request_lat_lon=False&lat={1}&lon={2}&positive-east-longitude=True&data-path=http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_macav2metdata_{3}_GFDL-ESM2M_r1i1p1_{8}_{9}_CONUS_daily.nc&variable=air_temperature&variable-name={3}_GFDL-ESM2M_{8}&data-path=http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_macav2metdata_{4}_GFDL-ESM2M_r1i1p1_{8}_{9}_CONUS_daily.nc&variable=air_temperature&variable-name={4}_GFDL-ESM2M_{8}&data-path=http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_macav2metdata_{5}_GFDL-ESM2M_r1i1p1_{8}_{9}_CONUS_daily.nc&variable=relative_humidity&variable-name={5}_GFDL-ESM2M_{8}&data-path=http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_macav2metdata_{6}_GFDL-ESM2M_r1i1p1_{8}_{9}_CONUS_daily.nc&variable=relative_humidity&variable-name={6}_GFDL-ESM2M_{8}&data-path=http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_macav2metdata_{7}_GFDL-ESM2M_r1i1p1_{8}_{9}_CONUS_daily.nc&variable={7}&variable-name=pr_GFDL-ESM2M_{8}"
+URL = "http://climate-dev.nkn.uidaho.edu/Services/get-netcdf-data/?download-csv=True&request_lat_lon=False&lat={0}&lon={1}&positive-east-longitude=True&data-path=http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_macav2metdata_{2}_GFDL-ESM2M_r1i1p1_{7}_{8}_CONUS_daily.nc&variable=air_temperature&variable-name={2}_GFDL-ESM2M_{7}&data-path=http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_macav2metdata_{3}_GFDL-ESM2M_r1i1p1_{7}_{8}_CONUS_daily.nc&variable=air_temperature&variable-name={3}_GFDL-ESM2M_{7}&data-path=http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_macav2metdata_{4}_GFDL-ESM2M_r1i1p1_{7}_{8}_CONUS_daily.nc&variable=relative_humidity&variable-name={4}_GFDL-ESM2M_{7}&data-path=http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_macav2metdata_{5}_GFDL-ESM2M_r1i1p1_{7}_{8}_CONUS_daily.nc&variable=relative_humidity&variable-name={5}_GFDL-ESM2M_{7}&data-path=http://thredds.northwestknowledge.net:8080/thredds/dodsC/agg_macav2metdata_{6}_GFDL-ESM2M_r1i1p1_{7}_{8}_CONUS_daily.nc&variable=precipitation&variable-name={6}_GFDL-ESM2M_{7}"
 
 CSV_HEADER_MAP = {
 				'T_min':'tasmin_GFDL-ESM2M_rcp45(K)',
@@ -35,7 +35,9 @@ CSV_HEADER_MAP = {
 				'Precip(mm)':'pr_GFDL-ESM2M_rcp45(mm)'
 			}
 
-"""
+
+def getUrl(lat, lon, scenario):
+	"""
 	getUrl
 	returns a formatted url for downloading the required csv.
 	
@@ -45,16 +47,16 @@ CSV_HEADER_MAP = {
 	lon: the longitude of the requested point
 	scenario: the requested scenario rcp45 of 85
 	historical : boolean value, decides requested time period
-"""
-def getUrl(lat, lon, scenario, period):
-	if(historical):
-		scenario = 'historical'
+	"""
+	if(scenario == 'historical'):
 		period = '1950_2005'
 	else:
 		period = '2006_2099'
 	return URL.format(lat,lon,'tasmin','tasmax','rhsmin','rhsmax','pr',scenario,period)
 
 def main():
+	
+	"""
 	if len(sys.argv) < 3:
 		print("too few args")
 		sys.exit(1)
@@ -62,7 +64,7 @@ def main():
 	lat = sys.argv[1]
 	lon = sys.argv[2]
 	
-	"""
+	
 	scenario = sys.arv[3]
 	historical = sys.argv[4]
 	if scenario not in ['rcp45','rcp85']:
@@ -73,16 +75,17 @@ def main():
 	data_dir = "data"
 	if not os.path.isdir(data_dir):
 		os.mkdir(data_dir)
-	scenarios = ['rcp45', 'rcp85']
+	latlons = pd.read_csv('maskedCaliforniaCoords.csv')
+	scenarios = ['rcp45']#, 'rcp85', 'historical']
 	for scen in scenarios:
-		for hisorical in [True, False]:
-			fn = scen_str(lat)+'_'+str(l)+'.csv'
-			if(historical)
-				fn = 'historical_'+fn
-			else
-				fn = 'future_'+fn
+		for i in latlons.index:
+			lat = latlons.Lat[i]
+			lon = latlons.Lon[i]		
+			fn = scen+'_'+str(lat)+'_'+str(lon)+'.csv'
+			if os.path.exists(data_dir+'/'+fn):
+				continue;
 			print('requesting data...')
-			csv = requests.get(url.format(lat, lon, scen, historical))
+			csv = requests.get(getUrl(lat, lon, scen))
 			f = open(data_dir+'/'+fn,'w')
 			f.write(csv.text)
 			f.close()

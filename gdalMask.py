@@ -46,7 +46,7 @@ if __name__=="__main__":
 	dbBand = db.GetRasterBand(1)
 	geotrans = db.GetGeoTransform()
 
-	latLons = "/home/acic2016final-cali/CaliforniaIDs.csv"
+	latLons = "/home/cc/acic2016final-cali/CaliforniaIDs.csv"
 	with open(latLons) as f:
 		header = f.readline()
 		print(header.strip())
