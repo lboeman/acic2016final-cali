@@ -9,19 +9,17 @@ import numpy as np
 import pandas as pd
 import argparse as parse
 
-def getPath(variable, scenario, period):
+def getPath(data_dir, variable, scenario, period):
 	# TODO: add in variables to each string for changing RCP45/85 and historical
 	# rcp time range: 2006-2099 historical: 1950-2005
-	path = "macav2metdata_{0}_GFDL-ESM2G_r1i1p1_{1}_{2}_WUSA.nc"
-	if(scenario == 'historical'):
-		period = '2006-2099'
-	else:
-		period = '1950-2005'
-	return path.format(variable, scenario, period)
+	path = "macav2metdata_{0}_GFDL-ESM2G_r1i1p1_{1}_{2}_CONUS_daily.nc"
+	#      "macav2metdata_{0}_GFDL-ESM2G_r1i1p1_{1}_{2}_CONUS_daily.nc
+	return data_dir+'/'+path.format(variable, scenario, period)
+
 
 def main():
 	start = datetime(1900, 1, 1)
-	data_dir = "data"
+	data_dir = "/home/cc/2006-10_test_data"
 	if not os.path.isdir(data_dir):
 		os.mkdir(data_dir)
 	# TARGET DATA, adapt to change over time
@@ -54,18 +52,24 @@ def main():
 	HISTORICAL_DATES = ['1950-1954', '1955-2959', '1960-1965', '1966-1970', '1971-1975',
 			    '1976-1980', '1981-1985', '1986-1990', '1991-1995', '1996-2000',
 			    '2001-2005']			
-	for lat,lon in coordinates:
+	scenario = 'rcp45'
+	coordinates = pd.read_csv('maskedCaliforniaCoords.csv')
+	for i in coordinates.index:
+		lat = coordinates.Lat[i]
+		lon = coordinates.Lon[i]
 		df = pd.DataFrame() # create a new dataframe for eah
 		# CREATE data handles
 		for var,idx  in VAR_PATHS.items():
 			# iterate through the netcdfs based on scenario
-			if(scenario == 'historical'):
+			if scenario == 'historical' :
 				dates = HISTORICAL_DATES
 			else:
 				dates = FUTURE_DATES
 			for period in dates:
-				
-				fh = Dataset(getPath(var, scenario, period),'r',format="NETCDF4")# filehandle
+				print(getPath(data_dir, var, scenario, period))
+				#fh = Dataset(getPath(var, scenario, period),'r',format="NETCDF4")# filehandle
+				fh = Dataset(getPath(data_dir, var, 'rcp45', '2006-2010'),'r',format="NETCDF4")# filehandle
+
 				
 				lath = fh.variables['lat']		# latitude handle
 				lonh = fh.variables['lon']		# longitude handle
@@ -74,7 +78,7 @@ def main():
 
 				# extrace data
 				time_length = len(timeh)		# get the number of records
-				time_index = range(day-1, time_length, 2)  # step through the values one day at a time
+				time_index = range(day-1, time_length, 1)  # step through the values one day at a time
 				time = timeh[time_index]
 				lat = lath[:]
 				lon = lonh[:]
