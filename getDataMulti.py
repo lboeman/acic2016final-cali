@@ -16,6 +16,7 @@ def getPath(input_dir, variable, scenario, period):
 	# 	macav2metdata_{0}_GFDL-ESM2G_r1i1p1_{1}_{2}_CONUS_daily.nc
 	return input_dir+'/'+path.format(variable, scenario, period)
 
+
 def main():
 	start = datetime(1900, 1, 1)
 	input_dir = "/mnt/store/one-model-data"
@@ -23,8 +24,15 @@ def main():
 	if not os.path.isdir(data_dir):
 		print("Data directory does not exist")
 		sys.exit(1)
-	# needed vars: year, month, day,tmax, tmin, precip(mm),tave,precip(cm),rhave
+	# TARGET DATA, adapt to change over time
 	day = 1
+	longitude = 118.0
+	lat_target = 34.02 # 45.0
+	lon_target = 360 - longitude
+
+	# needed vars: year, month, day,tmax, tmin, precip(mm),tave,precip(cm),rhave
+	
+
 	VAR_PATHS = {
 			'tasmax':"air_temperature",
 			'tasmin':"air_temperature",
@@ -39,33 +47,31 @@ def main():
 			'rhsmax':"rhmax",
 			'rhsmin':"rhmin",
 			}
-	FUTURE_DATES = ['2006_2010', '2011_2015', '2016_2020', '2021_2025', '2026_2030',
-			'2031_2035', '2036_2040', '2041_2045', '2046_2050', '2051_2055',
-			'2056_2060', '2061_2065', '2066_2070', '2071_2075', '2076_2080',
-			'2081_2085', '2086_2090', '2091_2095', '2096_2099']
-	HISTORICAL_DATES = ['1950_1954', '1955_2959', '1960_1965', '1966_1970', '1971_1975',
-			    '1976_1980', '1981_1985', '1986_1990', '1991_1995', '1996_2000',
-			    '2001_2005']			
+	FUTURE_DATES = ['2006-2010', '2011-2015', '2016-2020', '2021-2025', '2026-2030',
+			'2031-2035', '2036-2040', '2041-2045', '2046-2050', '2051-2055',
+			'2056-2060', '2061-2065', '2066-2070', '2071-2075', '2076-2080',
+			'2081-2085', '2086-2090', '2091-2095', '2095-2099']
+	HISTORICAL_DATES = ['1950-1954', '1955-2959', '1960-1965', '1966-1970', '1971-1975',
+			    '1976-1980', '1981-1985', '1986-1990', '1991-1995', '1996-2000',
+			    '2001-2005']			
 	scenario = 'rcp45'
 	coordinates = pd.read_csv('SouthernCalifornia.csv')
-	count = 0
-	for i in coordinates.index:
-		lat_target = coordinates.Lat[i]
-		lon_target = 360 + float(coordinates.Lon[i])
+	#coordinates = [ ('42.02','-122.61') ]
+	for lat,lon in coordinates:
+	#for i in coordinates.index:
+		#lat = coordinates.Lat[i]
+		#lon = coordinates.Lon[i]
 		df = pd.DataFrame() # create a new dataframe for eah
-		#set a boolean to know if we've already added time values
-		time_added = False
-		time_series = pd.Series()
 		# CREATE data handles
 		for var,idx  in VAR_PATHS.items():
-			var_series = pd.Series()
 			# iterate through the netcdfs based on scenario
 			if scenario == 'historical' :
 				dates = HISTORICAL_DATES
 			else:
 				dates = FUTURE_DATES
 			for period in dates:
-				fh = Dataset(getPath(input_dir, var, scenario, period),'r')# filehandle
+				#fh = Dataset(getPath(var, scenario, period),'r',format="NETCDF4")# filehandle
+				fh = Dataset(getPath(input_dir, var, 'rcp45', '2006_2010'),'r')# filehandle
 				lath = fh.variables['lat']		# latitude handle
 				lonh = fh.variables['lon']		# longitude handle
 				timeh = fh.variables['time']		# time handle
@@ -97,25 +103,13 @@ def main():
 				lat=lat[lat_index]
 				lon=lon[lon_index]	
 					
-				var_series = var_series.append(pd.Series(datah[time_index,lat_index,lon_index]))
-				#if VAR_HEADER_MAP[var] in df.columns:
- 					# TODO: build a series and concat them at the end of this loop.
-				#	df[VAR_HEADER_MAP[var]] = pd.concat((df[VAR_HEADER_MAP[var]],pd.Series(datah[time_index,lat_index,lon_index])),axis=1)
-				#else:
-				#	df[VAR_HEADER_MAP[var]] = pd.Series(datah[time_index,lat_index,lon_index])
-				if not time_added:
-					time_series = time_series.append(pd.Series(time))
-				fh.close()
-				# End period loop
-			if not time_added:
-				df['time'] = time_series
-			time_added=True
-			# 		
-			df[VAR_HEADER_MAP[var]] = var_series
-			# end variable loop
+				if VAR_HEADER_MAP[var] in df.columns:
+					df[VAR_HEADER_MAP[var]].append(pd.Series(datah[time_index,lat_index,lon_index]))
 
+				else:
+					df[VAR_HEADER_MAP[var]] = pd.Series(datah[time_index,lat_index,lon_index])
 		# Get a list of dates by adding their number of days post 1900,1,1
-		days = [start+timedelta(days=int(x)) for x in df['time']]
+		days = [start+timedelta(days=int(x)) for x in time]
 		# Get lists of year, month and day
 		df["Year"] = [ day.year for day in days ]
 		df["Month"] = [ day.month for day in days ]
@@ -132,8 +126,7 @@ def main():
 		del df["rhmin"]
 		
 		df = df[['Year','Month','Day','T_max','T_min','Precip(mm)','T_ave','Precip(cm)','rh_ave']]
-		filename = "%s_%s_%s.csv" % (scenario, lat, float(lon-360))
-		count = count + 1
-		print("%s: Writing: %s" % (count, filename))
+		filename = "%s_%s_%s.csv" % (scenario, lat, lon)
+		print("Writing: %s" % filename)
 		df.to_csv(data_dir+'/'+filename,index=False)
 main()
