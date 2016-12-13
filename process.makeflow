@@ -2,7 +2,5 @@
 isRunning.txt: 
 	LOCAL date > isRunning.txt
 
-caliData.csv: 
-	./getData.py /bin/
 
  
